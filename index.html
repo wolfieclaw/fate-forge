@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fate Forge – Play with Your Possible Futures</title>
+  <style>
+    /* Simple, clean styling – feel free to tweak */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      background: #fafafa;
+    }
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+    }
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+    input[type="number"],
+    select,
+    input[type="range"] {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+    input[type="range"] {
+      height: 2.5rem;
+      background: transparent;
+    }
+    button {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #2980b9;
+    }
+    .results {
+      margin-top: 2rem;
+    }
+    .path-card {
+      background: white;
+      border: 1px solid #eee;
+      border-radius: 14px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+      position: relative;
+      overflow: hidden;
+    }
+    .path-card::before {
+      content: '';
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 6px;
+      background: linear-gradient(180deg, #6c5ce7, #00b894);
+    }
+    .path-card h3 {
+      margin-top: 0;
+      color: #2c3e50;
+      margin-bottom: 0.4rem;
+    }
+    .probability {
+      font-weight: bold;
+      color: #e74c3c;
+      margin-bottom: 0.8rem;
+    }
+    .card-actions {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+    .secondary-btn {
+      background: #f1f5f9;
+      color: #1f2937;
+      border: 1px solid #dbe4ee;
+    }
+    .secondary-btn:hover {
+      background: #e2e8f0;
+    }
+    .share-btn {
+      background: #1da1f2;
+    }
+    .share-btn:hover {
+      background: #0d95e8;
+    }
+    .copy-btn {
+      background: #10b981;
+    }
+    .copy-btn:hover {
+      background: #059669;
+    }
+    .results-header {
+      margin: 2rem 0 1rem;
+      padding: 1rem 1.25rem;
+      background: #eef6ff;
+      border: 1px solid #d9eafe;
+      border-radius: 12px;
+    }
+    .results-header strong {
+      color: #1d4ed8;
+    }
+    footer {
+      text-align: center;
+      margin-top: 3rem;
+      color: #7f8c8d;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Fate Forge</h1>
+  <p>Discover playful, probabilistically‑inspired stories about your possible futures.</p>
+
+  <form id="fate-form">
+    <div class="form-group">
+      <label for="age">Your Age</label>
+      <input type="number" id="age" min="18" max="100" value="35" required>
+    </div>
+
+    <div class="form-group">
+      <label for="occupation">Occupation Vibe</label>
+      <select id="occupation" required>
+        <option value="">— Choose —</option>
+        <option value="tech">Tech / Software</option>
+        <option value="creative">Creative / Artist</option>
+        <option value="finance">Finance / Trading</option>
+        <option value="health">Health / Care</option>
+        <option value="education">Education / Academia</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="risk">Risk Tolerance</label>
+      <input type="range" id="risk" min="0" max="100" value="50">
+      <span id="risk-value">50</span> (<span id="risk-label">Medium</span>)
+    </div>
+
+    <div class="form-group">
+      <label for="goal">One Big Goal</label>
+      <select id="goal" required>
+        <option value="">— Choose —</option>
+        <option value="travel">Travel the world</option>
+        <option value="family">Start a family</option>
+        <option value="wealth">Build wealth</option>
+        <option value="learn">Learn something deep</option>
+        <option value="art">Make art/music</option>
+        <option value="help">Help others</option>
+        <option value="happy">Just be happy</option>
+      </select>
+    </div>
+
+    <button type="submit">Reveal My Fates</button>
+  </form>
+
+  <div class="results" id="results">
+    <!-- Results will be injected here -->
+  </div>
+
+  <div id="reroll-zone" style="display:none; margin-top: 1rem;">
+    <button id="reroll-btn" class="secondary-btn">Reveal 3 more futures</button>
+  </div>
+
+  <footer>
+    Made with ❤️ by Wolfie (your OpenClaw assistant) &amp; you.
+  </footer>
+
+  <script>
+    const fateTemplates = [
+      {
+        id: 'steady_climber',
+        title: 'The Steady Climber',
+        probability: 32,
+        bestFor: {
+          riskTolerance: ['low', 'medium'],
+          goals: ['wealth', 'family', 'happy'],
+          occupations: ['finance', 'tech', 'education']
+        },
+        text: 'You stay mostly on your current path, getting better and more trusted with time. By your early forties, people start describing you as “solid” and “reliable,” which is flattering but also faintly insulting. You hit some version of your main goal, though not in the dramatic way you once imagined. Life is stable, respectable, and occasionally interrupted by the unsettling thought that this may have been the plan all along.'
+      },
+      {
+        id: 'burnout_pivot',
+        title: 'The Burnout Pivot',
+        probability: 18,
+        bestFor: {
+          riskTolerance: ['medium', 'high'],
+          goals: ['happy', 'learn', 'art'],
+          occupations: ['finance', 'tech', 'health']
+        },
+        text: 'Everything looks fine from the outside right up until it absolutely isn’t. One season of overwork, quiet resentment, and strange emotional flatness pushes you into a hard reset. You walk away from something “sensible,” disappear for a while, and come back pointed in a completely different direction. The money gets weirder, the days get less predictable, and somehow you start feeling more like yourself.'
+      },
+      {
+        id: 'lucky_side_quest',
+        title: 'The Lucky Side Quest',
+        probability: 22,
+        bestFor: {
+          riskTolerance: ['low', 'medium', 'high'],
+          goals: ['travel', 'learn', 'art', 'help'],
+          occupations: ['creative', 'tech', 'other']
+        },
+        text: 'A random curiosity — something you almost didn’t click on, try, or say yes to — ends up changing the shape of your life. It starts as a side project, hobby, trip, or conversation and then slowly becomes the thing everyone associates you with. You never fully stop being surprised by it. Years later, you still tell people, “Honestly, that was never the plan.”'
+      },
+      {
+        id: 'quietly_rich_life',
+        title: 'The Quietly Rich Life',
+        probability: 28,
+        bestFor: {
+          riskTolerance: ['low', 'medium'],
+          goals: ['wealth', 'family'],
+          occupations: ['finance', 'tech', 'education', 'other']
+        },
+        text: 'You never become flashy, famous, or especially loud about your success. But over time, through a few good decisions and many boring ones, your life becomes surprisingly comfortable. You build a kind of freedom that other people underestimate because it doesn’t look cinematic. One day you realize you have engineered a life with very little panic in it, which turns out to be one of the better luxuries.'
+      },
+      {
+        id: 'beautiful_detour',
+        title: 'The Beautiful Detour',
+        probability: 20,
+        bestFor: {
+          riskTolerance: ['low', 'medium', 'high'],
+          goals: ['travel', 'happy', 'learn'],
+          occupations: ['creative', 'other', 'tech']
+        },
+        text: 'You lose time on something that looks, at first, like a mistake. A move that doesn’t pay off. A relationship that changes shape. A project that goes nowhere. But the detour leaves behind a new skill, a new city, a new friend, or a new version of you that would not have appeared any other way. It never becomes the story you expected, but it becomes one you keep.'
+      },
+      {
+        id: 'unexpected_operator',
+        title: 'The Unexpected Operator',
+        probability: 24,
+        bestFor: {
+          riskTolerance: ['medium'],
+          goals: ['wealth', 'help', 'learn'],
+          occupations: ['finance', 'tech', 'education']
+        },
+        text: 'At some point you stop being “someone with potential” and quietly become the person who actually gets things done. You build systems. You become weirdly calm in chaos. People start coming to you when things are messy, expensive, or uncertain. It’s not glamorous, but it gives you influence, competence, and a slightly dangerous level of confidence.'
+      },
+      {
+        id: 'romantic_recalibration',
+        title: 'The Romantic Recalibration',
+        probability: 17,
+        bestFor: {
+          riskTolerance: ['low', 'medium', 'high'],
+          goals: ['family', 'happy'],
+          occupations: ['creative', 'health', 'other']
+        },
+        text: 'Love does not arrive in the shape, timing, or packaging you expected. Maybe it starts late, restarts unexpectedly, or arrives just after you had made peace with going alone. Either way, it forces a reordering of your life. Some plans get softer, some get stronger, and your future becomes less optimized but more alive.'
+      },
+      {
+        id: 'wildcard_relocation',
+        title: 'The Wildcard Relocation',
+        probability: 14,
+        bestFor: {
+          riskTolerance: ['medium', 'high'],
+          goals: ['travel', 'art', 'happy'],
+          occupations: ['creative', 'tech', 'other']
+        },
+        text: 'A city, country, or coastline gets under your skin and refuses to leave. What starts as a visit, fantasy, or temporary move gradually becomes your real life. You end up somewhere that makes previous versions of you seem oddly provincial. The logistics are messy, the identity shift is real, and yet every few weeks you catch yourself thinking: this was the correct kind of ridiculous.'
+      },
+      {
+        id: 'health_wakeup_call',
+        title: 'The Health Wake-Up Call',
+        probability: 13,
+        bestFor: {
+          riskTolerance: ['low', 'medium', 'high'],
+          goals: ['happy', 'family'],
+          occupations: ['finance', 'tech', 'health', 'other']
+        },
+        text: 'Your body, gently or dramatically, forces your attention. It’s not the end of anything, but it is the end of pretending you’re infinitely postponable. You rebuild routines, redraw priorities, and start valuing energy more than image. Oddly enough, this phase makes your life smaller in some ways and much better in others.'
+      },
+      {
+        id: 'cult_following',
+        title: 'The Cult Following',
+        probability: 11,
+        bestFor: {
+          riskTolerance: ['medium', 'high'],
+          goals: ['art', 'help', 'learn'],
+          occupations: ['creative', 'tech', 'other']
+        },
+        text: 'You make something niche, strange, useful, or oddly beautiful — and a small but devoted group of people loves it. Not millions. Not world domination. Just enough real humans caring deeply enough to change the energy around your work. It becomes the kind of success that would confuse a venture capitalist and delight a sane person.'
+      },
+      {
+        id: 'late_bloom',
+        title: 'The Late Bloom',
+        probability: 26,
+        bestFor: {
+          riskTolerance: ['low', 'medium', 'high'],
+          goals: ['wealth', 'learn', 'happy'],
+          occupations: ['finance', 'tech', 'creative', 'other']
+        },
+        text: 'You spend longer than you’d like feeling slightly behind. Other people seem to get there first — career, confidence, money, clarity, whatever your thing is. Then, almost annoyingly late, things start clicking. You become good in public after years of becoming good in private. It is less romantic than early genius, but much sturdier.'
+      },
+      {
+        id: 'pleasantly_strange_ending',
+        title: 'The Pleasantly Strange Ending',
+        probability: 19,
+        bestFor: {
+          riskTolerance: ['low', 'medium', 'high'],
+          goals: ['happy', 'art', 'learn', 'travel'],
+          occupations: ['creative', 'other', 'tech']
+        },
+        text: 'Your life does not become neat. It becomes specific. You accumulate odd rituals, niche expertise, a few stories that sound fake, and a handful of people who truly know you. The future never settles into a single obvious plot, but it develops texture, humor, and meaning. Which, in the end, is a better deal than perfection.'
+      }
+    ];
+
+    function getRiskBucket(value) {
+      if (value < 33) return 'low';
+      if (value < 66) return 'medium';
+      return 'high';
+    }
+
+    function scoreTemplate(template, profile) {
+      let score = template.probability;
+      if (template.bestFor.riskTolerance.includes(profile.riskTolerance)) score += 20;
+      if (template.bestFor.goals.includes(profile.goal)) score += 20;
+      if (template.bestFor.occupations.includes(profile.occupation)) score += 20;
+      if (profile.age >= 45 && template.id === 'health_wakeup_call') score += 10;
+      if (profile.age <= 30 && template.id === 'late_bloom') score += 8;
+      if (profile.goal === 'travel' && template.id === 'wildcard_relocation') score += 10;
+      return score;
+    }
+
+    function shuffle(list) {
+      const copy = [...list];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function pickFates(profile) {
+      const scored = fateTemplates
+        .map(template => ({ ...template, score: scoreTemplate(template, profile) }))
+        .sort((a, b) => b.score - a.score);
+
+      const topTier = shuffle(scored.slice(0, 4));
+      const wildcardPool = shuffle(scored.slice(4));
+
+      const primary = topTier[0] || scored[0];
+      const secondary = topTier[1] || scored[1] || scored[0];
+      const wildcard = wildcardPool[0] || topTier[2] || scored[2] || scored[0];
+
+      return [primary, secondary, wildcard];
+    }
+
+    const vibeLabels = {
+      tech: 'tech-shaped world',
+      creative: 'creative life',
+      finance: 'sharp-edged finance orbit',
+      health: 'care-heavy life path',
+      education: 'thoughtful knowledge world',
+      other: 'slightly harder-to-label existence'
+    };
+
+    const goalLabels = {
+      travel: 'go further than expected',
+      family: 'build a meaningful home base',
+      wealth: 'create a calmer financial life',
+      learn: 'go deep on something that changes you',
+      art: 'make something original and alive',
+      help: 'be useful in a way that matters',
+      happy: 'construct a life that actually feels good to live'
+    };
+
+    const flavorBits = {
+      steady_climber: [
+        'The strange part is not the success but how normal it starts to feel.',
+        'You become the sort of person others trust with unglamorous important things.',
+        'Somewhere in there, consistency starts looking suspiciously like power.'
+      ],
+      burnout_pivot: [
+        'At least one person calls this irrational. They are not entirely wrong.',
+        'You lose some status and gain a pulse.',
+        'The reset looks messy in real time and obvious in hindsight.'
+      ],
+      lucky_side_quest: [
+        'It has the energy of a joke that accidentally becomes your biography.',
+        'The side road keeps refusing to stay a side road.',
+        'You keep trying to explain it logically, which never really works.'
+      ],
+      quietly_rich_life: [
+        'The glamour never arrives, but the freedom absolutely does.',
+        'Your future looks less impressive on social media than it feels in your nervous system.',
+        'A shocking amount of peace comes from boring competence.'
+      ],
+      beautiful_detour: [
+        'What first feels like lost time later starts looking like disguised architecture.',
+        'You do not get the clean version of the story, just the good one.',
+        'This is the branch where disappointment leaves gifts behind.'
+      ],
+      unexpected_operator: [
+        'You become weirdly difficult to rattle.',
+        'People begin treating your calm like infrastructure.',
+        'Competence sneaks up on you and then refuses to leave.'
+      ],
+      romantic_recalibration: [
+        'The heart, annoyingly, remains one of the least linear systems in your life.',
+        'You end up building around warmth rather than optimization.',
+        'Some carefully maintained assumptions do not survive contact with affection.'
+      ],
+      wildcard_relocation: [
+        'Your life acquires new weather, new habits, and a new version of your face.',
+        'You become briefly administrative and permanently altered.',
+        'One reckless geography choice changes the emotional climate of everything.'
+      ],
+      health_wakeup_call: [
+        'You discover that energy is not boring; it is the whole economy.',
+        'A smaller life briefly appears, then reveals itself to be a better-shaped one.',
+        'You stop treating your body like an inconvenient delivery vehicle for your ambitions.'
+      ],
+      cult_following: [
+        'The audience is small enough to fit in a room and real enough to change your week.',
+        'It never becomes mass-market, which may be exactly why it stays alive.',
+        'A niche thing with genuine believers turns out to be a very respectable miracle.'
+      ],
+      late_bloom: [
+        'The delay irritates you right up until it starts compounding in your favor.',
+        'You ripen in private and arrive in public later than planned but harder to shake.',
+        'The timing offends your ego and rewards your actual life.'
+      ],
+      pleasantly_strange_ending: [
+        'Your future stops trying to look generic and starts trying to look true.',
+        'The plot becomes less obvious and more worth inhabiting.',
+        'It is not tidy, but it has texture, and texture wins.'
+      ]
+    };
+
+    function randomFrom(list) {
+      return list[Math.floor(Math.random() * list.length)];
+    }
+
+    function personalizeText(text, profile, fate, index) {
+      const fiveYears = profile.age + 5;
+      const tenYears = profile.age + 10;
+      const intros = [
+        `At ${profile.age}, starting from your ${vibeLabels[profile.occupation]} and a ${profile.riskTolerance}-risk temperament,`,
+        `From where you are now — age ${profile.age}, aiming to ${goalLabels[profile.goal]} —`,
+        `Given your ${profile.riskTolerance}-risk streak and your pull toward ${goalLabels[profile.goal]},`
+        ];
+
+      const endings = {
+        travel: [
+          'The map gets stranger, and that turns out to be a feature, not a bug.',
+          'Your life gets geographically less sensible and spiritually better.',
+          'Distance becomes part of your personality in an oddly healthy way.'
+        ],
+        family: [
+          'It becomes less about chasing everything and more about protecting what matters.',
+          'The center of gravity shifts toward tenderness, loyalty, and practical devotion.',
+          'You start measuring success less by velocity and more by who still feels safe with you.'
+        ],
+        wealth: [
+          'Not flashy rich, more like peacefully hard-to-rattle.',
+          'You do not become absurdly wealthy, just gloriously less fragile.',
+          'Money stops being the main drama and becomes useful background architecture.'
+        ],
+        learn: [
+          'You become the kind of person who sees more than you used to.',
+          'Curiosity stops being a hobby and starts becoming a way of living.',
+          'Your mind gets sharper, stranger, and much harder to entertain with nonsense.'
+        ],
+        art: [
+          'Somewhere in there, your taste starts turning into an actual body of work.',
+          'The things you make begin carrying your fingerprints in a way no one could fake.',
+          'Expression stops being occasional and becomes structural.'
+        ],
+        help: [
+          'Your usefulness becomes part of your identity, but in a good way, not a martyr way.',
+          'People begin leaving your presence slightly more repaired than they arrived.',
+          'Being genuinely helpful turns into one of your quiet superpowers.'
+        ],
+        happy: [
+          'The future gets less optimized and more worth waking up inside.',
+          'You stop performing a life and start inhabiting one.',
+          'Happiness turns out to be less fireworks and more relief, rhythm, and sunlight.'
+        ]
+      };
+
+      const modifiers = {
+        low: [
+          'You do not leap blindly; you build footing first.',
+          'Caution remains part of the architecture, but it no longer runs the whole building.',
+          'You move carefully, which is not the same thing as standing still.'
+        ],
+        medium: [
+          'You hedge just enough to stay sane while still changing things.',
+          'You keep one hand on the railing and one on the door handle.',
+          'You are neither reckless nor tame, which is honestly a useful combination.'
+        ],
+        high: [
+          'You say yes to the kind of chaos that occasionally pays emotional dividends.',
+          'Your appetite for risk continues to produce stories, not always stability.',
+          'You keep making choices that are mildly alarming and occasionally brilliant.'
+        ]
+      };
+
+      const wildcardOptions = [
+        'This one is less likely, but it has the dangerous sparkle of something that could become your favorite version.',
+        'Statistically messier, emotionally tempting.',
+        'Unlikely does not mean impossible. It just means the script gets weird.'
+      ];
+
+      const flavor = randomFrom(flavorBits[fate.id] || ['The timeline refuses to be boring.']);
+      const ending = randomFrom(endings[profile.goal]);
+      const modifier = randomFrom(modifiers[profile.riskTolerance]);
+      const intro = randomFrom(intros);
+      const wildcardLine = index === 2 ? randomFrom(wildcardOptions) : '';
+
+      return `${intro} ${text} ${flavor} By around ${fiveYears}, the shape of your life starts to feel recognizably different. By ${tenYears}, this path has become one of your real possible selves. ${modifier} ${ending} ${wildcardLine}`.trim();
+    }
+
+    function buildShareText(fate, profile, index) {
+      const label = index === 2 ? `✨ Wildcard: ${fate.title}` : fate.title;
+      return `Fate Forge gave me this future: ${label}\n\n${personalizeText(fate.text, profile, fate, index)}\n\nBuilt with Fate Forge.`;
+    }
+
+    function shareFate(fate, profile, index) {
+      const text = buildShareText(fate, profile, index);
+      const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+      window.open(tweetUrl, '_blank', 'noopener,noreferrer');
+    }
+
+    async function copyFate(fate, profile, index) {
+      const text = buildShareText(fate, profile, index);
+      try {
+        await navigator.clipboard.writeText(text);
+        alert('Copied future to clipboard. Go inflict it on a friend.');
+      } catch {
+        alert('Clipboard copy failed. Mildly tragic.');
+      }
+    }
+
+    let lastProfile = null;
+
+    function renderFates(fates, profile) {
+      const resultsDiv = document.getElementById('results');
+      const rerollZone = document.getElementById('reroll-zone');
+      resultsDiv.innerHTML = `
+        <div class="results-header">
+          <strong>Your likely futures are in.</strong> One feels probable, one feels plausible, and one has dangerous little wildcard energy.
+        </div>
+      ` + fates.map((fate, index) => `
+        <div class="path-card">
+          <h3>${index === 2 ? '✨ Wildcard: ' : ''}${fate.title}</h3>
+          <p class="probability">Probability vibe: ${Math.min(95, fate.score)}%</p>
+          <p>${personalizeText(fate.text, profile, fate, index)}</p>
+          <div class="card-actions">
+            <button class="share-btn" onclick='shareFate(${JSON.stringify(fate)}, ${JSON.stringify(profile)}, ${index})'>Share</button>
+            <button class="copy-btn" onclick='copyFate(${JSON.stringify(fate)}, ${JSON.stringify(profile)}, ${index})'>Copy</button>
+          </div>
+        </div>
+      `).join('');
+      rerollZone.style.display = 'block';
+    }
+
+    document.getElementById('fate-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const profile = {
+        age: Number(document.getElementById('age').value),
+        occupation: document.getElementById('occupation').value,
+        riskTolerance: getRiskBucket(Number(document.getElementById('risk').value)),
+        goal: document.getElementById('goal').value
+      };
+
+      lastProfile = profile;
+      const fates = pickFates(profile);
+      renderFates(fates, profile);
+    });
+
+    document.getElementById('reroll-btn').addEventListener('click', function() {
+      if (!lastProfile) return;
+      const fates = pickFates(lastProfile);
+      renderFates(fates, lastProfile);
+    });
+
+    document.getElementById('risk').addEventListener('input', function() {
+      const val = Number(this.value);
+      document.getElementById('risk-value').textContent = val;
+      document.getElementById('risk-label').textContent = getRiskBucket(val).replace(/^./, c => c.toUpperCase());
+    });
+  </script>
+</body>
+</html>
