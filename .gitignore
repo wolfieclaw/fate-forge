@@ -1,0 +1,47 @@
+# --------------------------------------------------
+# Fate Forge repo hygiene + secret safety
+# --------------------------------------------------
+
+# Secrets / credentials
+.env
+.env.*
+*.env
+*.secret
+*.secrets
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*token*
+*apikey*
+*api_key*
+*secret*
+secrets/
+credentials/
+
+# Logs / temporary files
+*.log
+*.tmp
+*.bak
+*.orig
+scratch/
+local-notes/
+.audit-tmp/
+
+# Python / Node / tooling clutter
+__pycache__/
+*.py[cod]
+node_modules/
+coverage/
+dist/
+build/
+
+# Editor / OS noise
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
